@@ -5,6 +5,8 @@ from mlp.layers import Dense, Sigmoid
 from mlp.lossfun import mse, mse_prime
 from mlp.toolkit import dataLoader, train, predict, minMax
 
+import toolkit as tk
+
 dPath = "./train4dAll.txt"
 datasetArray = np.loadtxt(dPath, dtype=float)
 dL, eL = datasetArray.shape
@@ -24,9 +26,16 @@ print(Y)
 X = np.reshape(X, (dL, eL-1, 1))
 Y = np.reshape(Y, (dL, 1, 1))
 
+print(X)
+
 network = []
 for i in range(len(nn_shape)-1):
 	network.append(Dense(nn_shape[i], nn_shape[i+1]))
 	network.append(Sigmoid())
 
-train(network, mse, mse_prime, X, Y, epochs, learning_rate)
+#train(network, mse, mse_prime, X, Y, epochs, learning_rate)
+
+
+square, startPoint, endline = tk.getSquare("軌道座標點.txt")
+pred = predict(network, )
+
