@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from mlp.layers import Dense, Sigmoid
 from mlp.lossfun import mse, mse_prime
-from mlp.toolkit import dataLoader, train, predict, minMax
+from mlp.toolkit import dataLoader, train, predict, minMax, minMax_prime
 
 import toolkit as tk
 
@@ -12,30 +12,68 @@ datasetArray = np.loadtxt(dPath, dtype=float)
 dL, eL = datasetArray.shape
 
 classes = [-40, 40]
-epochs = 1000
+epochs = 200
 learning_rate = 0.01
 
-nn_shape = [3, 20, 1]
+nn_shape = [3, 64, 1]
 
 X = datasetArray[:, 0:3]
 Y = datasetArray[:, 3]
 
 Y = minMax(Y, -40, 40)
-print(Y)
 
 X = np.reshape(X, (dL, eL-1, 1))
 Y = np.reshape(Y, (dL, 1, 1))
-
-print(X)
+print(dL, eL-1, 1)
 
 network = []
 for i in range(len(nn_shape)-1):
 	network.append(Dense(nn_shape[i], nn_shape[i+1]))
 	network.append(Sigmoid())
 
-#train(network, mse, mse_prime, X, Y, epochs, learning_rate)
-
+train(network, mse, mse_prime, X, Y, epochs, learning_rate)
 
 square, startPoint, endline = tk.getSquare("軌道座標點.txt")
-pred = predict(network, )
 
+myPos = startPoint
+
+
+fig = plt.figure(figsize=(10,10))
+ax = fig.add_subplot(111)
+ax.plot(square[:, 0], square[:, 1], color="green")
+ax.plot(endline[:, 0], endline[:, 1],color="red")
+ax.axis([-20, 40, -5, 55])
+
+
+for i in range(50):
+
+	print(myPos)
+	ax.scatter(myPos[0], myPos[1], color="red")
+	f, l, r, fp, lp, rp = tk.Sensor(myPos, square, 50)
+
+	fd = tk.Distance([myPos[0], myPos[1]], fp)
+	ld = tk.Distance([myPos[0], myPos[1]], lp)
+	rd = tk.Distance([myPos[0], myPos[1]], rp)
+
+	pred = predict(network, [[fd], [rd], [ld]])
+	#print(fd, ld, rd)
+	#print("pred", pred)
+	pred = minMax_prime(pred, -40, 40)
+	#print("minMax_prime", pred)
+	myPos = tk.nextPos(myPos[0], myPos[1], myPos[2], pred[0][0])
+
+	for i in range(len(myPos)):
+		myPos[i] = round(myPos[i], 4)
+
+
+	ax.plot((f[0], f[2]), (f[1], f[3]), color="green")
+	ax.plot((l[0], l[2]), (l[1], l[3]), color="green")
+	ax.plot((r[0], r[2]), (r[1], r[3]), color="green")
+	#ax.scatter(data6D[0:20, 0], data6D[0:20, 1], color="blue")
+	
+	ax.scatter([fp[0], lp[0], rp[0]], [fp[1], lp[1], rp[1]], color="blue")
+
+
+
+
+plt.show()

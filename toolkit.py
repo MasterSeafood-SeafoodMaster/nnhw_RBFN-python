@@ -49,21 +49,20 @@ def get_line_cross_point(line1, line2):
 	x = (b0*c1-b1*c0)/D
 	y = (a1*c0-a0*c1)/D
 
-	xr = [line1[0], line1[2]]
-	yr = [line1[1], line1[3]]
-	inL1 = x>=min(xr) and x<=max(xr) and y>=min(yr) and y<=max(yr)
+	xr = [int(line1[0]), int(line1[2]) ]
+	yr = [int(line1[1]), int(line1[3]) ]
 
-	#print("line1", line1)
-	#print(xr, yr, inL1 and inL2)
+	#return x, y
 
-	xr = [line2[0], line2[2]]
-	yr = [line2[1], line2[3]]
-	inL2 = x>=min(xr) and x<=max(xr) and y>=min(yr) and y<=max(yr)
-	
-	if inL1 and inL2:
+	#ix = int(x); iy = int(y)
+	inLx = (x>=min(xr) and x<=max(xr)) and max(xr)-min(xr)>1
+	inLy = (y>=min(yr) and y<=max(yr)) and max(yr)-min(yr)>1
+	if inLx or inLy:
 		return x, y
 	else:
 		return "None"
+	
+
 
 def Distance(p1, p2):
 	p1=np.array(p1)
@@ -86,7 +85,6 @@ def Sensor(myPos, square, sLength):
 	lList=[]
 	rList=[]
 	r = math.radians(myPos[2]+90)
-	rh = r/2
 
 	for i in range(len(square)-1):
 		
@@ -95,26 +93,23 @@ def Sensor(myPos, square, sLength):
 		lelf = [myPos[0], myPos[1], myPos[0]+sLength*math.cos(r), myPos[1]+sLength*math.sin(r)]
 		right = [myPos[0], myPos[1], myPos[0]-sLength*math.cos(r), myPos[1]-sLength*math.sin(r)]
 
-		lf = [myPos[0], myPos[1], (lelf[2]+forward[2])/2, (lelf[3]+forward[3])/2]
-		rf = [myPos[0], myPos[1], (right[2]+forward[2])/2, (right[3]+forward[3])/2]
+		lf = [myPos[0], myPos[1], (lelf[2]+forward[2]), (lelf[3]+forward[3])]
+		rf = [myPos[0], myPos[1], (right[2]+forward[2]), (right[3]+forward[3])]
 
 		pp = get_line_cross_point(l1, forward)
-		if pp != "None": fList.append(pp)
+		if pp != "None" and sameDir(forward, pp): fList.append(pp)
 		
 		pp = get_line_cross_point(l1, lf)
-		if pp != "None": lList.append(pp)
+		if pp != "None" and sameDir(forward, pp): lList.append(pp)
 		
-
-		#print("rightrightrightrightrightright:")
 		pp = get_line_cross_point(l1, rf)
-		if pp != "None": rList.append(pp)
+		if pp != "None" and sameDir(forward, pp): rList.append(pp)
 		
 	
 	fp = getNearest(myPos, fList)
 	lp = getNearest(myPos, lList)
 	rp = getNearest(myPos, rList)
 
-	print(fp, lp, rp)
 	return forward, lf, rf, fp, lp, rp
 
 def dataLoader(path):
@@ -129,3 +124,17 @@ def dataLoader(path):
 	data6D = np.array(data6D, dtype=np.float)
 
 	return data6D
+
+def inBox(p, Box):
+	xIn = p>=min(Box[0], Box[2]) and p <= max(Box[0], Box[2])
+	yIn = p>=min(Box[1], Box[3]) and p <= max(Box[1], Box[3])
+
+	return xIn and yIn
+
+def sameDir(forward, p):
+	f = np.array([forward[2]-forward[0], forward[3]-forward[1]])
+	p = np.array(p)
+	#print("f", f)
+	#print("p", p)
+
+	return np.dot(f, p)>0

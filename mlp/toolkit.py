@@ -51,3 +51,7 @@ def minMax(ori, Min, Max):
 	return (ori - Min) / (Max - Min)
 
 
+def minMax_prime(mm, Min, Max):
+	return (mm*(Max-Min))+Min
+
+
