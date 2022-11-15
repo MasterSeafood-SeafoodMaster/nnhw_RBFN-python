@@ -32,38 +32,7 @@ def nextPos(x, y, ang, theta):
 	#print(nx-x, ny-y, nang)
 
 	return np.array([nx, ny, nang], dtype=np.float)
-
-
-def calc_abc_from_line_2d(x0, y0, x1, y1):
-	a = y0-y1
-	b = x1-x0
-	c = x0*y1-x1*y0
-	return a, b, c
-
-
-def get_line_cross_point(line1, line2):
-	a0, b0, c0 = calc_abc_from_line_2d(*line1)
-	a1, b1, c1 = calc_abc_from_line_2d(*line2)
-	D = a0*b1-a1*b0
-	if D==0: return "None"
-	x = (b0*c1-b1*c0)/D
-	y = (a1*c0-a0*c1)/D
-
-	xr = [int(line1[0]), int(line1[2]) ]
-	yr = [int(line1[1]), int(line1[3]) ]
-
-	#return x, y
-
-	#ix = int(x); iy = int(y)
-	inLx = (x>=min(xr) and x<=max(xr)) and max(xr)-min(xr)>1
-	inLy = (y>=min(yr) and y<=max(yr)) and max(yr)-min(yr)>1
-	if inLx or inLy:
-		return x, y
-	else:
-		return "None"
 	
-
-
 def Distance(p1, p2):
 	p1=np.array(p1)
 	p2=np.array(p2)
@@ -72,45 +41,6 @@ def Distance(p1, p2):
 	
 	return p4
 
-def getNearest(myPos, p):
-	dList = []
-	for i in range(len(p)):
-		dList.append( Distance([myPos[0], myPos[1]], p[i]) )
-	#print("dList:", dList)
-	return p[dList.index(min(dList))]
-
-
-def Sensor(myPos, square, sLength):
-	fList=[]
-	lList=[]
-	rList=[]
-	r = math.radians(myPos[2]+90)
-
-	for i in range(len(square)-1):
-		
-		l1 = [square[i][0], square[i][1], square[i+1][0], square[i+1][1]]
-		forward = [myPos[0], myPos[1], myPos[0]+sLength*math.sin(r), myPos[1]-sLength*math.cos(r)]
-		lelf = [myPos[0], myPos[1], myPos[0]+sLength*math.cos(r), myPos[1]+sLength*math.sin(r)]
-		right = [myPos[0], myPos[1], myPos[0]-sLength*math.cos(r), myPos[1]-sLength*math.sin(r)]
-
-		lf = [myPos[0], myPos[1], (lelf[2]+forward[2]), (lelf[3]+forward[3])]
-		rf = [myPos[0], myPos[1], (right[2]+forward[2]), (right[3]+forward[3])]
-
-		pp = get_line_cross_point(l1, forward)
-		if pp != "None" and sameDir(forward, pp): fList.append(pp)
-		
-		pp = get_line_cross_point(l1, lf)
-		if pp != "None" and sameDir(forward, pp): lList.append(pp)
-		
-		pp = get_line_cross_point(l1, rf)
-		if pp != "None" and sameDir(forward, pp): rList.append(pp)
-		
-	
-	fp = getNearest(myPos, fList)
-	lp = getNearest(myPos, lList)
-	rp = getNearest(myPos, rList)
-
-	return forward, lf, rf, fp, lp, rp
 
 def dataLoader(path):
 	f = open(path, 'r')
@@ -126,15 +56,75 @@ def dataLoader(path):
 	return data6D
 
 def inBox(p, Box):
-	xIn = p>=min(Box[0], Box[2]) and p <= max(Box[0], Box[2])
-	yIn = p>=min(Box[1], Box[3]) and p <= max(Box[1], Box[3])
+	xIn = p[0]>min(Box[0][0], Box[1][0]) and p[0] < max(Box[0][0], Box[1][0])
+	yIn = p[1]>min(Box[0][1], Box[1][1]) and p[1] < max(Box[0][1], Box[1][1])
 
 	return xIn and yIn
 
-def sameDir(forward, p):
-	f = np.array([forward[2]-forward[0], forward[3]-forward[1]])
-	p = np.array(p)
-	#print("f", f)
-	#print("p", p)
+def sameDir(myPos, frl, p):
+	frl = np.array([frl[0]-myPos[0], frl[1]-myPos[1]])
+	p = np.array([p[0]-myPos[0], p[1]-myPos[1]])
+	return np.dot(frl, p)>0
 
-	return np.dot(f, p)>0
+def getCrossPoint(l1, ls):
+	x=l1[0][0]; y=l1[0][1]
+	rx = l1[1][0]-l1[0][0]
+	ry = l1[1][1]-l1[0][1]
+	p = "None"
+	if ls[0][0] == ls[1][0]: #ver
+		fx = ls[0][0]
+		p = [ fx, (ry*(fx-x)/rx)+y ]
+		if p[1]>max(ls[0][1], ls[1][1]) or p[1]<min(ls[0][1], ls[1][1]):
+			p="None"
+
+	elif ls[0][1] == ls[1][1]: #hor
+		fy = ls[0][1]
+		p = [ (rx*(fy-y)/ry)+x, fy]
+		if p[0]>max(ls[0][0], ls[1][0]) or p[0]<min(ls[0][0], ls[1][0]):
+			p="None"
+	return p
+
+def getLine(myPos, ang, l):
+	r = math.radians(ang)
+	return [myPos[0]+round(l*math.cos(r)), myPos[1]+round(l*math.sin(r))]
+
+def Distance(p1, p2):
+	print(p1, p2)
+	rx = abs(p1[0]-p2[0])
+	ry = abs(p1[1]-p2[1])
+	return math.hypot(rx, ry)
+
+def getNearest(myPos, pl):
+	D = 500
+	fp = ""
+	for p in pl:
+		rD = Distance(myPos, p)
+		if rD<D:
+			D=rD
+			fp = p
+	return fp
+
+def SensorV2(myPos, square, sLength):
+	fpl=[]; rpl=[]; lpl=[]
+	myAngle = myPos[2]
+	myPosi = [myPos[0], myPos[1]]
+
+	f = getLine(myPosi, myAngle, sLength)
+	r = getLine(myPosi, myAngle-45, sLength)
+	l = getLine(myPosi, myAngle+45, sLength)
+
+	for i in range(len(square)-1):
+		fp = getCrossPoint([myPosi, f], [square[i], square[i+1]])
+		if fp!="None" and sameDir(myPosi, f, fp):
+			fpl.append(fp)
+		
+		rp = getCrossPoint([myPosi, r], [square[i], square[i+1]])
+		if rp!="None" and sameDir(myPosi, r, rp):
+			rpl.append(rp)
+		
+		lp = getCrossPoint([myPosi, l], [square[i], square[i+1]])
+		if lp!="None" and sameDir(myPosi, l, lp):
+			lpl.append(lp)
+		
+	return f, r, l,getNearest(myPosi, fpl), getNearest(myPosi, rpl), getNearest(myPosi, lpl) # 
+	

@@ -9,24 +9,26 @@ square, startPoint, endline = tk.getSquare("軌道座標點.txt")
 
 data6D = tk.dataLoader("train6dAll.txt")
 
-startPoint = [10, 15, 90]
-startPoint[2] = 0
+startPoint = [10, 15, 56]
+#startPoint[2] = 45
 
-f, l, r, fp, lp, rp = tk.Sensor(startPoint, square, 50)
+#f, l, r, fp, lp, rp = tk.Sensor(startPoint, square, 50)
 
+fp, rp, lp = tk.SensorV2(startPoint, square, 10)
 
 fig = plt.figure(figsize=(10,10))
 ax = fig.add_subplot(111)
-ax.plot(square[:, 0], square[:, 1], color="green")
+ax.plot(square[:, 0], square[:, 1], color="blue")
 
-ax.plot((f[0], f[2]), (f[1], f[3]), color="green")
-ax.plot((l[0], l[2]), (l[1], l[3]), color="green")
-ax.plot((r[0], r[2]), (r[1], r[3]), color="green")
+#ax.plot((startPoint[0], f[0]), (startPoint[1], f[1]), color="green")
+#ax.plot((startPoint[0], r[0]), (startPoint[1], r[1]), color="green")
+#ax.plot((startPoint[0], l[0]), (startPoint[1], l[1]), color="green")
 
-#ax.scatter(data6D[0:20, 0], data6D[0:20, 1], color="blue")
+ax.scatter(fp[0], fp[1], color="red")
+ax.scatter(rp[0], rp[1], color="red")
+ax.scatter(lp[0], lp[1], color="red")
+
 ax.scatter(startPoint[0], startPoint[1], color="red")
-ax.scatter([fp[0], lp[0], rp[0]], [fp[1], lp[1], rp[1]], color="blue")
-
 ax.plot(endline[:, 0], endline[:, 1],color="red")
 
 ax.axis([-20, 40, -5, 55])
