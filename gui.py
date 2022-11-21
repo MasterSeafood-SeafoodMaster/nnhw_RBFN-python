@@ -1,11 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.animation as animation
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 
 from mlp.layers import Dense, Sigmoid
 from mlp.lossfun import mse, mse_prime
 from mlp.toolkit import dataLoader, train, predict, minMax, minMax_prime
 
+import toolkit as tkit
 
 import tkinter as tk
 
@@ -19,7 +21,8 @@ class MyApp(tk.Tk):
 		self.initUI()
 
 	def initUI(self):
-		self.canvs = FigureCanvasTkAgg(fig, self)
+		#self.canvs = FigureCanvasTkAgg(fig, master=self)
+		
 		self.configure(background='white')
 
 		self.Path = tk.StringVar()
@@ -47,7 +50,7 @@ class MyApp(tk.Tk):
 		self.setEntry(self.Model_shape, (180, 520), "3, 64, 1", 10)
 
 		self.setButton("Train!", (20, 600), self.Train)
-		self.setButton("Draw_line!", (120, 600), self.Train)
+		#self.setButton("Draw_line!", (120, 600), self.Train)
 
 	def setLabel(self, text, pos):
 		label = tk.Label(self, text=text, font=("MV Boli", 16), bg="white")
@@ -63,6 +66,7 @@ class MyApp(tk.Tk):
 		button.place(x=pos[0], y=pos[1])
 
 	def Train(self):
+		self.i = 0
 		self.dataPath = self.Path.get()
 
 		self.epochs = int(self.Epochs.get())
@@ -87,28 +91,56 @@ class MyApp(tk.Tk):
 			self.nn.append(Sigmoid())
 
 		train(self.nn, mse, mse_prime, self.X, self.Y, self.epochs, self.learning_rate)
-		self.square, self.startPoint, self.endline = tk.getSquare("軌道座標點.txt")
+		self.square, self.startPoint, self.endline = tkit.getSquare("軌道座標點.txt")
 		self.myPos = self.startPoint
 
-		while not tk.inBox(self.myPos, self.endline):
-			ax.scatter(self.myPos[0], self.myPos[1], color="blue")
-			self.f, self.r, self.l, self.fp, self.rp, self.lp = tk.SensorV2(self.myPos, self.square, 10)
+		self.points=[]
+		while not tkit.inBox(self.myPos, self.endline):
+			#ax.scatter(self.myPos[0], self.myPos[1], color="blue")
+			self.f, self.r, self.l, self.fp, self.rp, self.lp = tkit.SensorV2(self.myPos, self.square, 10)
 
-			self.fd = tk.Distance([self.myPos[0], self.myPos[1]], self.fp)
-			self.ld = tk.Distance([self.myPos[0], self.myPos[1]], self.lp)
-			self.rd = tk.Distance([self.myPos[0], self.myPos[1]], self.rp)
+			self.fd = tkit.Distance([self.myPos[0], self.myPos[1]], self.fp)
+			self.ld = tkit.Distance([self.myPos[0], self.myPos[1]], self.lp)
+			self.rd = tkit.Distance([self.myPos[0], self.myPos[1]], self.rp)
 
 			self.pred = predict(self.nn, [[self.fd], [self.rd], [self.ld]])
 
 			self.pred = minMax_prime(self.pred, -40, 40)
-			self.myPos = tk.nextPos(self.myPos[0], self.myPos[1], self.myPos[2], self.pred[0][0])
+			self.myPos = tkit.nextPos(self.myPos[0], self.myPos[1], self.myPos[2], self.pred[0][0])
+			self.points.append(self.myPos)
 
+		print(self.points)
 		self.draw_picture(self.points)
 
-	def draw_picture(self, points):
+	def run(self, data):
 		global fig, ax
-		self.canvs.draw()
-		self.canvs.get_tk_widget().pack()
+		ax.plot(self.square[:, 0], self.square[:, 1], color="green")
+		ax.plot([self.endline[0][0], self.endline[1][0], self.endline[1][0], self.endline[0][0], self.endline[0][0]], [self.endline[0][1], self.endline[0][1], self.endline[1][1], self.endline[1][1],self.endline[0][1]],color="red")
+		if self.i < len(self.points):
+			ax.scatter(self.points[data][0], self.points[data][1], color="blue")
+			self.i+=1
+
+
+	def draw_picture(self, points):
+		#global fig, ax
+		ani = animation.FuncAnimation(fig, self.run, frames=len(points), interval=100, repeat=True)
+		ani.save("./ani.gif", fps=10)
+
+		self.frameCnt = len(self.points)
+		self.frames = [tk.PhotoImage(file="./ani.gif",format = 'gif -index %i' %(i)) for i in range(self.frameCnt)]
+		self.flabel = tk.Label(self)
+		self.flabel.place(x=200, y=25)
+		self.after(50, self.update, 0)
+		#self.canvs.draw()
+		#self.canvs.get_tk_widget().pack()
+
+	def update(self, ind):
+		self.frame = self.frames[ind]
+		ind += 1
+		if ind == self.frameCnt:
+			ind = 0
+		self.flabel.configure(background="white", image=self.frame)
+		self.after(50, self.update, ind)
 
 app = MyApp()
 app.mainloop()
